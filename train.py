@@ -3,6 +3,7 @@ import copy
 import argparse
 import chainer
 import numpy as np
+import sys
 
 try:
     from matplotlib import use
@@ -17,8 +18,7 @@ from pu_loss import PULoss
 from dataset import load_dataset
 
 
-
-def process_args():
+def process_args(arguments):
     parser = argparse.ArgumentParser(
         description='non-negative / unbiased PU learning Chainer implementation',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -28,9 +28,9 @@ def process_args():
                         help='Zero-origin GPU ID (negative value indicates CPU)')
     parser.add_argument('--preset', '-p', type=str, default=None,
                         choices=['figure1', 'exp-mnist', 'exp-cifar'],
-                        help="Preset of configuration\n"+
-                             "figure1: The setting of Figure1\n"+
-                             "exp-mnist: The setting of MNIST experiment in Experiment\n"+
+                        help="Preset of configuration\n"
+                             "figure1: The setting of Figure1\n"
+                             "exp-mnist: The setting of MNIST experiment in Experiment\n"
                              "exp-cifar: The setting of CIFAR10 experiment in Experiment")
     parser.add_argument('--dataset', '-d', default='mnist', type=str, choices=['mnist', 'cifar10'],
                         help='The dataset name')
@@ -52,10 +52,9 @@ def process_args():
                         help='Stepsize of gradient method')
     parser.add_argument('--out', '-o', default='result',
                         help='Directory to output the result')
-    args = parser.parse_args()
-    if args.gpu >= 0:
-        chainer.cuda.check_cuda_available()
-        chainer.cuda.get_device_from_id(args.gpu).use()
+    args = parser.parse_args(arguments)
+    if args.gpu >= 0 and chainer.backends.cuda.available:
+        chainer.backends.cuda.get_device_from_id(args.gpu).use()
     if args.preset == "figure1":
         args.labeled = 100
         args.unlabeled = 59900
@@ -225,8 +224,8 @@ class MultiPUEvaluator(chainer.training.extensions.Evaluator):
             summary.add(observation)
         return summary.compute_mean()
 
-def main():
-    args = process_args()
+def main(arguments):
+    args = process_args(arguments)
     # dataset setup
     XYtrain, XYtest, prior = load_dataset(args.dataset, args.labeled, args.unlabeled)
     prior = 0.5 ## fixed
@@ -288,4 +287,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(sys.argv[1:])
