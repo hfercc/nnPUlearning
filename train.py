@@ -242,7 +242,7 @@ def main(arguments):
     #loss_funcs = {"nnPU": PULoss(prior, loss=loss_type, nnPU=True, gamma=args.gamma, beta=args.beta),
     #              "uPU": PULoss(prior, loss=loss_type, nnPU=False)}
     models = {"nnPU": copy.deepcopy(model)}
-    loss_funcs = {"nnPU": PULoss(prior, loss=loss_type, nnPU=True, gamma=args.gamma, beta=args.beta)}
+    loss_funcs = {"nnPU": PULoss(prior, loss=loss_type, nnpu=True, gamma=args.gamma, beta=args.beta)}
     if args.gpu >= 0:
         for m in models.values():
             m.to_gpu(args.gpu)
