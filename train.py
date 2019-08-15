@@ -258,22 +258,12 @@ def main(arguments):
     trainer.extend(MultiEvaluator(test_iter, models, device=args.gpu))
     trainer.extend(extensions.ProgressBar())
     trainer.extend(extensions.PrintReport(
-                ['epoch', 'train/nnPU/error', 'test/nnPU/error', 'train/uPU/error', 'test/uPU/error', 
-                'train/nnPU/ap', 'test/nnPU/ap', 'train/uPU/ap', 'test/uPU/ap',
-                'train/nnPU/an', 'test/nnPU/an', 'train/uPU/an', 'test/uPU/an','elapsed_time']))
+                ['epoch', 'train/nnPU/apn', 'test/nnPU/apn']))
     if extensions.PlotReport.available():
             trainer.extend(
-                extensions.PlotReport(['train/nnPU/error', 'train/uPU/error'], 'epoch', file_name='training_error.png'))
+                extensions.PlotReport(['train/nnPU/apn'], 'epoch', file_name='training_acc.png'))
             trainer.extend(
-                extensions.PlotReport(['test/nnPU/error', 'test/uPU/error'], 'epoch', file_name='test_error.png'))
-            trainer.extend(
-                extensions.PlotReport(['train/nnPU/ap', 'train/uPU/ap'], 'epoch', file_name='training_ap.png'))
-            trainer.extend(
-                extensions.PlotReport(['test/nnPU/ap', 'test/uPU/ap'], 'epoch', file_name='testing_ap.png'))
-            trainer.extend(
-                extensions.PlotReport(['train/nnPU/an', 'train/uPU/an'], 'epoch', file_name='training_an.png'))
-            trainer.extend(
-                extensions.PlotReport(['test/nnPU/an', 'test/uPU/an'], 'epoch', file_name='testing_an.png'))
+                extensions.PlotReport(['test/nnPU/apn'], 'epoch', file_name='testing_acc.png'))
     print("prior: {}".format(prior))
     print("loss: {}".format(args.loss))
     print("batchsize: {}".format(args.batchsize))

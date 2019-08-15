@@ -40,7 +40,7 @@ class MyClassifier(Chain):
         n_n = (t == -1).sum()
         t_p = ((h == 1) * (t == 1)).sum()
         t_n = ((h == -1) * (t == -1)).sum()
-        chainer.reporter.report({'error': result, 'ap': t_p/n_p, 'an': t_n/n_n}, self)
+        chainer.reporter.report({'error': result, 'ap': t_p/n_p, 'an': t_n/n_n, 'apn': (t_p + t_n) / (n_p + n_n)}, self)
         return cuda.to_cpu(result) if xp != np else result
 
 
