@@ -2,6 +2,7 @@ import six
 import copy
 import argparse
 import chainer
+import numpy as np
 
 try:
     from matplotlib import use
@@ -65,7 +66,7 @@ def process_args():
         args.labeled = 1000
         args.unlabeled = 60000
         args.dataset = "mnist"
-        args.batchsize = 30000
+        args.batchsize = 128
         args.model = "mlp"
     elif args.preset == "exp-cifar":
         args.labeled = 1000
@@ -140,7 +141,6 @@ class MultiEvaluator(chainer.training.extensions.Evaluator):
     def evaluate(self):
         iterator = self._iterators['main']
         targets = self.get_all_targets()
-
         if self.eval_hook:
             self.eval_hook(self)
         it = copy.copy(iterator)
@@ -178,6 +178,8 @@ class MultiPUEvaluator(chainer.training.extensions.Evaluator):
     def compute_summary(self, summary):
         prior = self.prior
         computed_summary = {}
+        accuracy_p = {}
+        accuracy_n = {}
         for k, values in summary.items():
             t_p, t_u, f_p, f_u = values
             n_p = t_p + f_u
@@ -185,7 +187,9 @@ class MultiPUEvaluator(chainer.training.extensions.Evaluator):
             error_p = 1 - t_p / n_p
             error_u = 1 - t_u / n_u
             computed_summary[k] = 2 * prior * error_p + error_u - prior
-        return computed_summary
+            accuracy_p[k] = t_p / n_p
+            accuracy_n[k] = t_u / n_u
+        return computed_summary, accuracy_p, accuracy_n
 
     def evaluate(self):
         iterator = self._iterators['main']
@@ -208,12 +212,16 @@ class MultiPUEvaluator(chainer.training.extensions.Evaluator):
                 in_vars = Variable(in_arrays)
                 for k, target in targets.items():
                     summary[k] += target.compute_prediction_summary(in_vars)
-        computed_summary = self.compute_summary(summary)
+        computed_summary, accuracy_p, accuracy_n = self.compute_summary(summary)
         summary = chainer.reporter.DictSummary()
         observation = {}
         with chainer.reporter.report_scope(observation):
             for k, value in computed_summary.items():
                 targets[k].call_reporter({'error': value})
+            for k, value in accuracy_p.items():
+                targets[k].call_reporter({'ap': value})
+            for k, value in accuracy_n.items():
+                targets[k].call_reporter({'an': value})
             summary.add(observation)
         return summary.compute_mean()
 
@@ -221,6 +229,7 @@ def main():
     args = process_args()
     # dataset setup
     XYtrain, XYtest, prior = load_dataset(args.dataset, args.labeled, args.unlabeled)
+    prior = 0.5 ## fixed
     dim = XYtrain[0][0].size // len(XYtrain[0][0])
     train_iter = chainer.iterators.SerialIterator(XYtrain, args.batchsize)
     valid_iter = chainer.iterators.SerialIterator(XYtrain, args.batchsize, repeat=False, shuffle=False)
@@ -230,9 +239,11 @@ def main():
     loss_type = select_loss(args.loss)
     selected_model = select_model(args.model)
     model = selected_model(prior, dim)
-    models = {"nnPU": copy.deepcopy(model), "uPU": copy.deepcopy(model)}
-    loss_funcs = {"nnPU": PULoss(prior, loss=loss_type, nnPU=True, gamma=args.gamma, beta=args.beta),
-                  "uPU": PULoss(prior, loss=loss_type, nnPU=False)}
+    #models = {"nnPU": copy.deepcopy(model), "uPU": copy.deepcopy(model)}
+    #loss_funcs = {"nnPU": PULoss(prior, loss=loss_type, nnPU=True, gamma=args.gamma, beta=args.beta),
+    #              "uPU": PULoss(prior, loss=loss_type, nnPU=False)}
+    models = {"nnPU": copy.deepcopy(model)}
+    loss_funcs = {"nnPU": PULoss(prior, loss=loss_type, nnPU=True, gamma=args.gamma, beta=args.beta)}
     if args.gpu >= 0:
         for m in models.values():
             m.to_gpu(args.gpu)
@@ -248,12 +259,22 @@ def main():
     trainer.extend(MultiEvaluator(test_iter, models, device=args.gpu))
     trainer.extend(extensions.ProgressBar())
     trainer.extend(extensions.PrintReport(
-                ['epoch', 'train/nnPU/error', 'test/nnPU/error', 'train/uPU/error', 'test/uPU/error', 'elapsed_time']))
+                ['epoch', 'train/nnPU/error', 'test/nnPU/error', 'train/uPU/error', 'test/uPU/error', 
+                'train/nnPU/ap', 'test/nnPU/ap', 'train/uPU/ap', 'test/uPU/ap',
+                'train/nnPU/an', 'test/nnPU/an', 'train/uPU/an', 'test/uPU/an','elapsed_time']))
     if extensions.PlotReport.available():
             trainer.extend(
                 extensions.PlotReport(['train/nnPU/error', 'train/uPU/error'], 'epoch', file_name='training_error.png'))
             trainer.extend(
                 extensions.PlotReport(['test/nnPU/error', 'test/uPU/error'], 'epoch', file_name='test_error.png'))
+            trainer.extend(
+                extensions.PlotReport(['train/nnPU/ap', 'train/uPU/ap'], 'epoch', file_name='training_ap.png'))
+            trainer.extend(
+                extensions.PlotReport(['test/nnPU/ap', 'test/uPU/ap'], 'epoch', file_name='testing_ap.png'))
+            trainer.extend(
+                extensions.PlotReport(['train/nnPU/an', 'train/uPU/an'], 'epoch', file_name='training_an.png'))
+            trainer.extend(
+                extensions.PlotReport(['test/nnPU/an', 'test/uPU/an'], 'epoch', file_name='testing_an.png'))
     print("prior: {}".format(prior))
     print("loss: {}".format(args.loss))
     print("batchsize: {}".format(args.batchsize))

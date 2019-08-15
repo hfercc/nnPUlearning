@@ -35,8 +35,13 @@ class MyClassifier(Chain):
         if isinstance(t, chainer.Variable):
             t = t.data
         result = (h != t).sum() / size
-        chainer.reporter.report({'error': result}, self)
+        n_p = (t == 1).sum()
+        n_n = (t == -1).sum()
+        t_p = ((h == 1) * (t == 1)).sum()
+        t_n = ((h == -1) * (t == -1)).sum()
+        chainer.reporter.report({'error': result, 'ap': t_p/n_p, 'an': t_n/n_n}, self)
         return cuda.to_cpu(result) if xp != np else result
+
 
     def compute_prediction_summary(self, x, t):
         xp = cuda.get_array_module(x, False)
