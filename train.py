@@ -65,13 +65,13 @@ def process_args(arguments):
         args.labeled = 1000
         args.unlabeled = 60000
         args.dataset = "mnist"
-        args.batchsize = 128
+        args.batchsize = 1024
         args.model = "mlp"
     elif args.preset == "exp-cifar":
         args.labeled = 1000
         args.unlabeled = 50000
         args.dataset = "cifar10"
-        args.batchsize = 500
+        args.batchsize = 1024
         args.model = "cnn"
         args.stepsize = 1e-5
     assert (args.batchsize > 0)
