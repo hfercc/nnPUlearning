@@ -126,7 +126,7 @@ class MultiUpdater(chainer.training.StandardUpdater):
         if isinstance(in_arrays, tuple):
             x, t = tuple(Variable(x) for x in in_arrays)
             for key in optimizers:
-                print(optimizers[key])
+                print(optimizers[key].lr)
                 optimizers[key].update(models[key], x, t, loss_funcs[key])
         else:
             raise NotImplemented
