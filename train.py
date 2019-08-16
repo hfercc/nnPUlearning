@@ -128,7 +128,7 @@ class MultiUpdater(chainer.training.StandardUpdater):
             for key in optimizers:
 
                 optimizers[key].update(models[key], x, t, loss_funcs[key])
-                print(optimizers[key].lr)
+                #print(optimizers[key].lr)
         else:
             raise NotImplemented
 
