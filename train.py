@@ -252,7 +252,7 @@ def main(arguments):
     updater = MultiUpdater(train_iter, optimizers, models, device=args.gpu, loss_func=loss_funcs)
     trainer = chainer.training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
     trainer.extend(extensions.LogReport(trigger=(1, 'epoch')))
-    trainer.extend(extensions.MultistepShift("lr", 0.7, [60, 90])
+    trainer.extend(extensions.MultistepShift("lr", 0.7, [60, 90]))
     train_01_loss_evaluator = MultiPUEvaluator(prior, valid_iter, models, device=args.gpu)
     train_01_loss_evaluator.default_name = 'train'
     trainer.extend(train_01_loss_evaluator)
