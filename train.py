@@ -126,6 +126,7 @@ class MultiUpdater(chainer.training.StandardUpdater):
         if isinstance(in_arrays, tuple):
             x, t = tuple(Variable(x) for x in in_arrays)
             for key in optimizers:
+                print(optimizers[key])
                 optimizers[key].update(models[key], x, t, loss_funcs[key])
         else:
             raise NotImplemented
@@ -252,7 +253,7 @@ def main(arguments):
     updater = MultiUpdater(train_iter, optimizers, models, device=args.gpu, loss_func=loss_funcs)
     trainer = chainer.training.Trainer(updater, (args.epoch, 'epoch'), out=args.out)
     trainer.extend(extensions.LogReport(trigger=(1, 'epoch')))
-    trainer.extend(extensions.MultistepShift("lr", 0.7, [60, 90], 0.001, optimizers))
+    #trainer.extend(extensions.MultistepShift("lr", 0.7, [60, 90], 0.001, optimizers))
     train_01_loss_evaluator = MultiPUEvaluator(prior, valid_iter, models, device=args.gpu)
     train_01_loss_evaluator.default_name = 'train'
     trainer.extend(train_01_loss_evaluator)
